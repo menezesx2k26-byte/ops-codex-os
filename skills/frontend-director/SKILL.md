@@ -96,3 +96,24 @@ When a runnable environment exists, inspect the rendered interface and relevant 
 - `NEEDS_REVISION`: a gate failed and the director continues autonomously.
 - `BLOCKED`: correct continuation requires authority, information, access, or a change outside frontend scope.
 - `APPROVED`: every material gate has sufficient evidence; terminal.
+
+
+## Menezes Design OS — shared UI source (2026-11-14)
+
+A reusable **private** design-system workspace exists at `menezesx2k26-byte/menezes-design-os`. This director remains the *only global frontend owner*; the Design OS is a subordinate source of owned React primitives, semantic tokens, theming, motion rules, blocks, Storybook stories, local catalog and source registry.
+
+Before implementing a nontrivial frontend feature, inspect the consumer project's framework, components, visual thesis and constraints, then consult the Design OS selectively. Never force unrelated products to share a visual identity. A React/Next project may consume a compatible versioned package after a validated pilot; an Astro/native project should prefer portable tokens and framework-native equivalents. Do not change app deployment, business logic, identity, backend, or APIs during discovery.
+
+On-demand specialist routes (do not preload or bulk-install):
+- `UI/UX Pro Max`: design intelligence, product-type/style research, palette and typography;
+- `GetDesign.md`: visual references only, never brand copying;
+- `Taste Skill`: composition and design distinctiveness;
+- `Emil Kowalski`: purposeful motion, timing and interactions;
+- `shadcn/ui`: accessible primitive and registry patterns;
+- `21st.dev`: candidate section patterns;
+- `React Bits`: candidate motion effects, subject to MIT + Commons Clause redistribution restrictions;
+- `Impeccable`: critique and polish against generic UI patterns.
+
+Use `design-intelligence/sources.json` in Design OS to resolve upstream URLs and license notes; verify current source and license before reuse. The private shadcn registry must **not** be exposed publicly just to enable anonymous CLI installation. No external vendor source is vendored by default.
+
+The catalog build passing does not imply product AA accessibility compliance. Gates remain real: keyboard, contrast, reduced motion, responsive screenshots, performance, regression and rollback evidence. Consumer rollout begins as a private, isolated pilot and never as implicit production migration.
