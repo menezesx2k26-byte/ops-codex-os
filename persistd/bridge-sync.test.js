@@ -21,7 +21,7 @@ async function withServer(fn) {
 test('bridge sync requires owner bearer and advances exactly one generation', async () => {
   await withServer(async (base) => {
     let response = await fetch(`${base}/v1/runs`, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
+      method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer owner-token' },
       body: JSON.stringify({
         runId: 'bridge-run',
         generation: 2,
