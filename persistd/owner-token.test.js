@@ -19,12 +19,21 @@ function load(options) {
   assert.ok(fs.existsSync(filename),'private owner digest loader is missing');
   return require(filename).loadOwnerTokenDigest(options);
 }
-test('private owner digest is optional until explicitly provisioned', t => {
+test('missing owner digest preserves legacy behavior on all platforms', t => {
   const f = fixture(t);
   assert.equal(load(f),'');
+});
+test('strict private digest permissions are accepted on POSIX', {skip: process.platform === 'win32'}, t => {
+  const f = fixture(t);
   fs.mkdirSync(f.directory,{mode:0o700});
   fs.writeFileSync(f.file,'a'.repeat(64)+'\n',{mode:0o600});
   assert.equal(load(f),'a'.repeat(64));
+});
+test('Windows fails closed on ambiguous POSIX mode bits', {skip: process.platform !== 'win32'}, t => {
+  const f = fixture(t);
+  fs.mkdirSync(f.directory,{mode:0o700});
+  fs.writeFileSync(f.file,'a'.repeat(64)+'\n',{mode:0o600});
+  assert.throws(() => load(f), /OWNER_DIGEST_INVALID/);
 });
 test('present invalid, exposed or symlinked owner digests fail closed', t => {
   const f = fixture(t); fs.mkdirSync(f.directory,{mode:0o700});
@@ -39,7 +48,7 @@ test('present invalid, exposed or symlinked owner digests fail closed', t => {
   fs.unlinkSync(f.file); fs.rmdirSync(f.directory); fs.symlinkSync(f.dataDirectory,f.directory);
   assert.throws(() => load(f), /OWNER_DIGEST_INVALID/);
 });
-test('owner reset revokes OAuth and changes approval while preserving service bearer', async t => {
+test('owner reset revokes OAuth and changes approval while preserving service bearer', {skip: process.platform === 'win32'}, async t => {
   const f = fixture(t), oldData = process.env.PERSISTFLOW_DATA_DIR;
   process.env.PERSISTFLOW_DATA_DIR=f.dataDirectory;
   t.after(() => { if(oldData===undefined) delete process.env.PERSISTFLOW_DATA_DIR; else process.env.PERSISTFLOW_DATA_DIR=oldData; });

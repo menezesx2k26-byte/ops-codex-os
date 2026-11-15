@@ -44,7 +44,7 @@ function errorStatus(error) {
   const code = error?.message || 'INTERNAL_ERROR';
   if (code === 'RUN_NOT_FOUND') return 404;
   if (code === 'DRIVE_AUTH_UNAVAILABLE') return 503;
-  if (['RUN_ALREADY_EXISTS', 'STALE_GENERATION', 'CLAIM_NOT_PENDING', 'CLAIM_TARGET_MISMATCH', 'CLAIM_NONCE_MISMATCH'].includes(code)) return 409;
+  if (['RUN_ALREADY_EXISTS', 'STALE_GENERATION', 'CLAIM_NOT_PENDING', 'CLAIM_TARGET_MISMATCH', 'CLAIM_NONCE_MISMATCH', 'AUTHORITY_LOCKED'].includes(code)) return 409;
   if (['RUN_ID_REQUIRED', 'INVALID_GENERATION', 'CLAIM_SECRET_REQUIRED', 'INVALID_JSON', 'BODY_TOO_LARGE', 'INVALID_RUN_UPDATE'].includes(code)) return 400;
   return 500;
 }
@@ -254,6 +254,15 @@ function createServer({
         if (!authorized) return sendJson(res, 401, { error: 'unauthorized' });
         const access = await service.issueDriveAccess(nodeId);
         return sendJson(res, 200, access);
+      }
+      // All run state is private. Authenticate before reading the request body.
+      // The semantic HTTP API is owner-only; OAuth access remains scoped to MCP.
+      if (url.pathname === '/v1/runs' || url.pathname.startsWith('/v1/runs/')) {
+        if (!ownerBearerAuthorized(req, mcpToken, mcpTokenDigest)) {
+          res.setHeader('cache-control', 'no-store');
+          return sendJson(res, 401, { error: 'unauthorized' });
+        }
+        res.setHeader('cache-control', 'no-store');
       }
       if (req.method === 'POST' && url.pathname === '/v1/runs') {
         const run = service.startRun(await readJson(req));
