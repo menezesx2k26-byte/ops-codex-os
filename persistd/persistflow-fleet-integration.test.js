@@ -513,7 +513,7 @@ test('persist_fleet_route MCP tool exposes durable route decision', async () => 
   };
   await withFleetServer(async (base) => {
     let response = await fetch(base + '/v1/runs', {
-      method: 'POST', headers: { 'content-type': 'application/json' },
+      method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer owner' },
       body: JSON.stringify({ runId: 'mcp-route', generation: 1 }),
     });
     assert.equal(response.status, 201);
