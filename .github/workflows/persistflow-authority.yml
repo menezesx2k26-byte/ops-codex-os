@@ -1,0 +1,80 @@
+name: persistflow-authority
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/persistflow-authority.yml"
+      - "persistd/**"
+      - "tests/**"
+      - "server.js"
+      - "package.json"
+      - "package-lock.json"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/persistflow-authority.yml"
+      - "persistd/**"
+      - "tests/**"
+      - "server.js"
+      - "package.json"
+      - "package-lock.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux — PersistFlow + non-Windows root
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            persistd/package-lock.json
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm --prefix persistd ci --ignore-scripts --no-audit --no-fund
+      - name: PersistFlow unit and integration suite
+        run: npm --prefix persistd test
+      - name: Root suite (Windows installer verified on Windows)
+        shell: bash
+        run: |
+          mapfile -t tests < <(find tests -maxdepth 1 -type f -name '*.test.js' ! -name 'fleet-installer-windows.test.js' | sort)
+          test "${#tests[@]}" -gt 0
+          node --test "${tests[@]}"
+      - name: Git whitespace integrity
+        run: git diff --check
+
+  windows:
+    name: Windows — full root and PersistFlow
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            persistd/package-lock.json
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm --prefix persistd ci --ignore-scripts --no-audit --no-fund
+      - name: Root suite including Windows PowerShell installer
+        run: npm test
+      - name: PersistFlow suite on Windows
+        run: npm --prefix persistd test
