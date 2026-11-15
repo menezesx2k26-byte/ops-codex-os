@@ -11,7 +11,7 @@ on:
       - "package-lock.json"
   push:
     branches:
-      - fix/persistflow-private-runs-file-lock-20261114
+      - main
     paths:
       - ".github/workflows/persistflow-authority.yml"
       - "persistd/**"
