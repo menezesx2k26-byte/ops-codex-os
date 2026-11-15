@@ -8,7 +8,7 @@ const { spawn } = require('node:child_process');
 async function start(dataDir) {
   const child = spawn(process.execPath, ['server.js'], {
     cwd: path.resolve(__dirname, '..'),
-    env: { ...process.env, PORT: '0', PERSISTFLOW_DATA_DIR: dataDir },
+    env: { ...process.env, PORT: '0', PERSISTFLOW_DATA_DIR: dataDir, PERSISTFLOW_MCP_TOKEN: 'test-restart-owner-token' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let output = '';
@@ -30,7 +30,7 @@ test('production server survives a process restart with the same data directory'
   const first = await start(dataDir);
   try {
     const create = await fetch(`${first.base}/v1/runs`, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
+      method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer test-restart-owner-token' },
       body: JSON.stringify({ runId: 'restart-run', generation: 1, status: 'ACTIVE' }),
     });
     assert.equal(create.status, 201);
@@ -40,7 +40,7 @@ test('production server survives a process restart with the same data directory'
   try {
     const health = await fetch(`${second.base}/healthz`);
     assert.deepEqual(await health.json(), { ok: true, service: 'persistflow', authority: 'file', durable: true });
-    const inspect = await fetch(`${second.base}/v1/runs/restart-run`);
+    const inspect = await fetch(`${second.base}/v1/runs/restart-run`, { headers: { authorization: 'Bearer test-restart-owner-token' } });
     assert.equal(inspect.status, 200);
     const body = await inspect.json();
     assert.equal(body.run.runId, 'restart-run');
