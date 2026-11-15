@@ -88,6 +88,24 @@ class FileAuthorityStore {
     return path.join(this.directory, name);
   }
 
+  // mkdir is atomic across processes on one shared filesystem. Never steal a
+  // stale lock automatically: an unprovable takeover risks split-brain claims.
+  withRunLock(runId, operation) {
+    fs.mkdirSync(this.directory, { recursive: true, mode: 0o700 });
+    const lockPath = this.filePath(runId) + '.lock';
+    try {
+      fs.mkdirSync(lockPath, { mode: 0o700 });
+    } catch (error) {
+      if (error?.code === 'EEXIST') throw new Error('AUTHORITY_LOCKED');
+      throw error;
+    }
+    try {
+      return operation();
+    } finally {
+      fs.rmdirSync(lockPath);
+    }
+  }
+
   read(runId) {
     const target = this.filePath(runId);
     try {
@@ -104,14 +122,28 @@ class FileAuthorityStore {
     fs.mkdirSync(this.directory, { recursive: true });
     const target = this.filePath(state.runId);
     const temp = `${target}.${process.pid}.${crypto.randomUUID()}.tmp`;
-    fs.writeFileSync(temp, `${JSON.stringify(state)}\n`, { encoding: 'utf8', mode: 0o600 });
-    fs.renameSync(temp, target);
+    let fd;
+    try {
+      fd = fs.openSync(temp, 'wx', 0o600);
+      fs.writeFileSync(fd, `${JSON.stringify(state)}\n`, 'utf8');
+      fs.fsyncSync(fd);
+    } finally {
+      if (fd !== undefined) fs.closeSync(fd);
+    }
+    try {
+      fs.renameSync(temp, target);
+    } catch (error) {
+      try { fs.unlinkSync(temp); } catch {}
+      throw error;
+    }
   }
 
   create(state) {
-    if (this.read(state.runId)) throw new Error('RUN_ALREADY_EXISTS');
-    this.write(clone(state));
-    return this.get(state.runId);
+    return this.withRunLock(state.runId, () => {
+      if (this.read(state.runId)) throw new Error('RUN_ALREADY_EXISTS');
+      this.write(clone(state));
+      return this.get(state.runId);
+    });
   }
 
   get(runId) {
@@ -119,20 +151,19 @@ class FileAuthorityStore {
   }
 
   update(runId, updater) {
-    const current = this.read(runId);
-    if (!current) throw new Error('RUN_NOT_FOUND');
-    const next = updater(clone(current));
-    if (!next || next.runId !== runId) throw new Error('INVALID_RUN_UPDATE');
-    this.write(clone(next));
-    return clone(next);
+    return this.withRunLock(runId, () => {
+      const current = this.read(runId);
+      if (!current) throw new Error('RUN_NOT_FOUND');
+      const next = updater(clone(current));
+      if (!next || next.runId !== runId) throw new Error('INVALID_RUN_UPDATE');
+      this.write(clone(next));
+      return clone(next);
+    });
   }
 
   claimSuccessor({ runId, expectedGeneration, generation, claimSecret }) {
-    const state = this.read(runId);
-    if (!state) throw new Error('RUN_NOT_FOUND');
-    const promoted = promoteSuccessor(state, { expectedGeneration, generation, claimSecret });
-    this.write(clone(promoted));
-    return clone(promoted);
+    return this.update(runId, (state) =>
+      promoteSuccessor(state, { expectedGeneration, generation, claimSecret }));
   }
 }
 
