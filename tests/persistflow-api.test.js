@@ -1,10 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createServer } = require('../server');
-const { MemoryAuthorityStore, digestClaimSecret } = require('../persistd/src/persistflow/authority-store');
+const { MemoryAuthorityStore, FileAuthorityStore, digestClaimSecret } = require('../persistd/src/persistflow/authority-store');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 
 async function withServer(store, fn) {
-  const server = createServer({ store, clock: () => new Date('2026-09-15T20:00:00Z') });
+  const server = createServer({ store, mcpToken: 'test-owner-token', mcpTokenDigest: '', clock: () => new Date('2026-09-15T20:00:00Z') });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   try {
     const { port } = server.address();
@@ -16,7 +19,7 @@ async function withServer(store, fn) {
 
 async function post(base, path, body) {
   return fetch(`${base}${path}`, {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer test-owner-token' }, body: JSON.stringify(body),
   });
 }
 test('creates and inspects a run through the semantic API', async () => {
@@ -28,7 +31,7 @@ test('creates and inspects a run through the semantic API', async () => {
     assert.equal(createdBody.run.runId, 'run-api');
     assert.equal(createdBody.run.generation, 1);
 
-    const inspected = await fetch(`${base}/v1/runs/run-api`);
+    const inspected = await fetch(`${base}/v1/runs/run-api`, { headers: { authorization: 'Bearer test-owner-token' } });
     assert.equal(inspected.status, 200);
     assert.equal((await inspected.json()).run.runId, 'run-api');
   });
@@ -76,4 +79,49 @@ test('claim endpoint CAS-promotes only the prepared successor secret', async () 
     assert.equal(run.generation, 4);
     assert.equal(run.successor, null);
   });
+});
+
+
+test('all semantic run routes reject anonymous and incorrect bearer before accessing state', async () => {
+  const store = new MemoryAuthorityStore();
+  await withServer(store, async (base) => {
+    const unauthenticated = [
+      ['POST', '/v1/runs', { runId: 'unauthorized-run' }],
+      ['GET', '/v1/runs/private-run'],
+      ['POST', '/v1/runs/private-run/heartbeat', { generation: 1 }],
+      ['POST', '/v1/runs/private-run/checkpoints', { generation: 1 }],
+      ['POST', '/v1/runs/private-run/claim', { expectedGeneration: 1, generation: 2, claimSecret: 'x' }],
+      ['POST', '/v1/runs/private-run/bridge/sync', { expectedGeneration: 1, generation: 2 }],
+    ];
+    for (const [method, path, body] of unauthenticated) {
+      for (const authorization of [undefined, 'Bearer wrong-token']) {
+        const response = await fetch(base + path, {
+          method,
+          headers: { ...(authorization ? { authorization } : {}), 'content-type': 'application/json' },
+          ...(body ? { body: JSON.stringify(body) } : {}),
+        });
+        assert.equal(response.status, 401, method + ' ' + path);
+        assert.deepEqual(await response.json(), { error: 'unauthorized' });
+        assert.equal(response.headers.get('cache-control'), 'no-store');
+      }
+    }
+    assert.equal(store.get('unauthorized-run'), null);
+  });
+});
+
+
+test('an existing file-store writer lock returns 409 and preserves run state', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pf-http-lock-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const store = new FileAuthorityStore(dir);
+  store.create({ runId: 'busy-run', generation: 1 });
+  const lockPath = store.filePath('busy-run') + '.lock';
+  fs.mkdirSync(lockPath);
+  await withServer(store, async (base) => {
+    const response = await post(base, '/v1/runs/busy-run/checkpoints', { generation: 1, nextSafeAction: 'wait' });
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), { error: 'authority_locked' });
+  });
+  assert.deepEqual(store.get('busy-run').checkpoints, undefined);
+  fs.rmdirSync(lockPath);
 });
