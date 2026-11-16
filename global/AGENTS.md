@@ -101,6 +101,14 @@ These are persistent cross-project operating rules for Codex.
 - When a full suite consumes a material share of the available agent window, record/reuse its result as durable evidence so the next session does not pay for the same proof again.
 - Token optimization must never weaken required production, safety, security, or irreversible-action gates.
 
+## Copilot PR review credit guard
+- Treat Copilot pull-request review as a metered external service, not as a mandatory CI gate or substitute for local tests, deterministic checks, or independent security review.
+- Never request Copilot re-review in a loop. For each PR, record the reviewed/requested HEAD SHA and outcome; at most one automatic/agent-initiated request per materially changed HEAD, and never re-request only to retry an entitlement, billing, insufficient-credit, or quota error.
+- On `insufficient remaining quota`, `billing error`, or equivalent reviewer refusal, mark only the Copilot-review step `BLOCKED_QUOTA`; do not misreport code quality, payment failure, or the entire PR as failed without evidence. Stop requests for that PR until fresh entitlement/credit evidence or explicit user approval changes the decision.
+- If the GitHub user/repository settings permit metered reviews and the user wants them, prefer `Lite` effort and disable review-on-every-push and draft review for high-frequency agent branches. Do not silently change user billing, activate overage, upgrade a plan, or weaken branch protection, required checks, and human security gates.
+- When a review is needed for a new SHA, check the current credit allowance versus the estimated effort before asking; estimates are not guarantees. For high-risk changes where Lite is insufficient, obtain a targeted independent review without inventing a Copilot success or violating the zero-incremental-cost constraint.
+- Repository agent instructions cannot override GitHub's own automatic-review account settings or rulesets; verify those controls separately and distinguish preventive policy from an actually applied platform configuration.
+
 ## Durable execution continuity
 - Treat model context as a working view, not as the authoritative history of execution.
 - For multi-step, interruptible, long-running, multi-agent, or cross-session work, invoke `$durable-execution-memory` when available.
