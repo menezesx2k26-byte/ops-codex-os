@@ -16,6 +16,6 @@
 - Full suite: initial `npm test` yielded 285 pass, 3 fail, 2 skip (290 total). Two TLS fixture failures were due to absent `openssl` from PATH. Using the already installed Git OpenSSL 3.5.6, the TLS pair passed; second full run was **287 pass, 1 fail, 2 skipped**. The only remaining failure is Windows `EPERM` when the existing P05 symlink fixture calls `fs.symlink`, without relevant code changes. No OS privilege changes were attempted.
 - `npm run validate:spec-kit`, `node --check scripts/obsidian-view.js`, and `git diff --check` returned exit 0.
 - Source scan: `answerWithContext` is called from existing smoke/native slice scripts, not from every production agent host. The global context-head policy is therefore not a universal technical interception point. Treat mandatory cross-agent deployment as **PENDING**, not complete.
-- Final Git revision and remote publication status must be recorded after git verification.
+- First feature commit `8c75836ea209e0280b8e9c2d2a207b209fa5b071` was pushed and confirmed by `git ls-remote`. Draft PR `#71` was created at `https://github.com/menezesx2k26-byte/ops-codex-os/pull/71`, based on PR #65 branch. No merge, deployment or production setting change followed.
 
 **Release gate:** keep PR draft / no production deployment, merge, OAuth or authority migration until stacked RAG branches and live identity/index availability are verified.
