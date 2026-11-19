@@ -1,4 +1,11 @@
-const { evictionReserves } = require('../storage/cache-manager');
+const GiB = 1024 ** 3;
+
+// Cache eviction keeps its own generous reserve. Work admission uses actual
+// scratch demand and a small emergency filesystem headroom, not cache policy.
+const MIN_EXECUTION_HEADROOM_BYTES = 2 * GiB;
+function executionHeadroom(totalDiskBytes) {
+  return Math.max(MIN_EXECUTION_HEADROOM_BYTES, Math.ceil(totalDiskBytes * 0.01));
+}
 
 function requiredCapabilities(intent) {
   const set = new Set(intent.requiredCapabilities || []);
@@ -33,10 +40,12 @@ function eligibleNodes({ config, snapshot, intent } = {}) {
 
     const freeDiskBytes = Number(hb.freeDiskBytes);
     const totalDiskBytes = Number(hb.totalDiskBytes);
-    const scratch = Number(intent?.estimatedScratchBytes || 0);
-    if (!Number.isFinite(freeDiskBytes) || !Number.isFinite(totalDiskBytes) || totalDiskBytes <= 0) continue;
-    const { startReserve } = evictionReserves(totalDiskBytes);
-    if (freeDiskBytes - scratch < startReserve) continue;
+    const scratch = Number(intent?.estimatedScratchBytes ?? 0);
+    if (!Number.isSafeInteger(freeDiskBytes) || freeDiskBytes < 0
+        || !Number.isSafeInteger(totalDiskBytes) || totalDiskBytes <= 0
+        || freeDiskBytes > totalDiskBytes
+        || !Number.isSafeInteger(scratch) || scratch < 0) continue;
+    if (freeDiskBytes - scratch < executionHeadroom(totalDiskBytes)) continue;
 
     const cached = new Set((hb.cachedObjectHashes || []).map((hash) => String(hash).toLowerCase()));
     let cachedArtifactCount = 0;
@@ -77,4 +86,4 @@ function deterministicOrder(candidates, intent, { honorPreferredCapabilities = f
   });
 }
 
-module.exports = { eligibleNodes, deterministicOrder };
+module.exports = { eligibleNodes, deterministicOrder, executionHeadroom, MIN_EXECUTION_HEADROOM_BYTES };
