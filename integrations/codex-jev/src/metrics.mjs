@@ -1,4 +1,5 @@
 const validNonnegative = value => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+const validTokens = value => Number.isSafeInteger(value) && value >= 0;
 const goodQuality = row => row.testsPassed === true && row.reviewerApproved === true
   && Number.isInteger(row.blockingDefects) && row.blockingDefects === 0;
 
@@ -24,7 +25,7 @@ export function compareRuns(records) {
     if (!goodQuality(row)) qualityPassed = false;
     if (!validNonnegative(row.durationMs)) gaps.push('INVALID_DURATION:' + tag + ':' + row.mode);
     if (row.workerTokens === null || row.workerTokens === undefined) gaps.push('MISSING_WORKER_TOKENS:' + tag + ':' + row.mode);
-    else if (!validNonnegative(row.workerTokens)) gaps.push('INVALID_WORKER_TOKENS:' + tag + ':' + row.mode);
+    else if (!validTokens(row.workerTokens)) gaps.push('INVALID_WORKER_TOKENS:' + tag + ':' + row.mode);
     if (!validNonnegative(row.jevCalls) || !Number.isInteger(row.jevCalls)) gaps.push('INVALID_JEV_CALLS:' + tag + ':' + row.mode);
     if (typeof row.servedModel !== 'string' || !row.servedModel.trim()) gaps.push('UNKNOWN_SERVED_MODEL:' + tag + ':' + row.mode);
   }
@@ -43,11 +44,12 @@ export function compareRuns(records) {
       [pair.baseline.workerTokens, 'baselineWorkerTokens'], [pair.adaptive.workerTokens, 'adaptiveWorkerTokens'],
       [pair.baseline.durationMs, 'baselineDurationMs'], [pair.adaptive.durationMs, 'adaptiveDurationMs'],
     ]) {
-      if (validNonnegative(source)) entry[field] += source;
+      if (entry[field] === null) continue;
+      if ((field.endsWith('WorkerTokens') ? validTokens : validNonnegative)(source)) entry[field] += source;
       else entry[field] = null;
     }
-    if (validNonnegative(pair.baseline.workerTokens)) baseTokens += pair.baseline.workerTokens;
-    if (validNonnegative(pair.adaptive.workerTokens)) adaptTokens += pair.adaptive.workerTokens;
+    if (validTokens(pair.baseline.workerTokens)) baseTokens += pair.baseline.workerTokens;
+    if (validTokens(pair.adaptive.workerTokens)) adaptTokens += pair.adaptive.workerTokens;
     if (validNonnegative(pair.baseline.durationMs)) baseDuration += pair.baseline.durationMs;
     if (validNonnegative(pair.adaptive.durationMs)) adaptDuration += pair.adaptive.durationMs;
   }
