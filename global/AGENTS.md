@@ -110,6 +110,8 @@ These are persistent cross-project operating rules for Codex.
 - Do not redo completed work merely because it is absent from the current context.
 - Before retrying destructive, costly, deployment, or externally mutating operations after an interruption, verify whether they already succeeded or partially completed.
 - For Cloudflare Workers deployments, resolve the exact live hostname to its `workers.dev` account subdomain/account before writing, and verify the active credential/connection controls that same account. A matching Worker script name in another account is not the same production target; stop rather than overwrite it.
+- For production deployments of the user's Cloudflare Pages/Workers projects, inspect `menezesx2k26-byte/ops-site-ops` first: `sites.json`, the dedicated gated workflow, deployment request state, and relevant run history. Reuse an existing `repo-native-workflow` and its centrally injected secrets instead of creating a duplicate repo-local workflow or copying credentials. Pin the exact source commit (prefer an immutable archive/release asset), verify build/audit and production smoke, and preserve mail DNS and unrelated Workers/data. Keep the Site Ops registry and project handoff aligned with the real repository/ref; never trust a stale registry entry or replay an old request SHA.
+
 - Never store secrets or credentials in durable context.
 - Use Apache Maka (`https://github.com/apache/maka`) as an architectural reference for durable execution records, recovery, and separation of saved history from model context when relevant; do not make it a dependency unless a project explicitly requires it.
 
