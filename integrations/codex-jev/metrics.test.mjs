@@ -66,3 +66,18 @@ test('task names cannot mutate the result object prototype', () => {
   assert.equal(Object.hasOwn(r.byTask,'__proto__'),true);
   assert.equal(r.byTask.__proto__.replicates,1);
 });
+
+test('a missing replicate metric cannot be disguised by a later valid replicate', () => {
+  const rows=[{...baseline,replicate:2,workerTokens:null},{...adaptive,replicate:2,workerTokens:700},baseline,adaptive];
+  const result=compareRuns(rows);
+  assert.equal(result.comparable,false);
+  assert.equal(result.byTask['public-lookup'].baselineWorkerTokens,null);
+  assert.equal(result.tokenSavingPercent,null);
+});
+
+test('fractional worker tokens are rejected instead of treated as valid usage', () => {
+  const r=compareRuns([baseline,{...adaptive,workerTokens:1.5}]);
+  assert.equal(r.comparable,false);
+  assert.equal(r.tokenSavingPercent,null);
+  assert.ok(r.gaps.some(item=>item.includes('INVALID_WORKER_TOKENS')));
+});
