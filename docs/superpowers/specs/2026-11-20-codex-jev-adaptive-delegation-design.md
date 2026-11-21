@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-20  
 **GOAL:** `CODEX-JEV-INTELLIGENT-ORCHESTRATION-20261120`  
-**Status:** PROPOSED / review required before runtime changes  
+**Status:** APPROVED for isolated pilot on 2026-11-20; implementation PARTIAL_VERIFIED; live Jev/OMX remains gated  
 **Owner:** Gabriel Codex OS (`menezesx2k26-byte/ops-codex-os`)  
 **Scope:** isolated Codex/OMX pilot, not PersistFlow production
 
