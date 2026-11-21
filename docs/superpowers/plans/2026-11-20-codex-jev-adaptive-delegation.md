@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- **Status:** PLANNED / unimplemented; require design review before runtime changes. No deployed or installed system may be claimed from this PR.
+- **Status:** Design approved for isolated implementation on 2026-11-20; Tasks 1/2/5 partially implemented and unit-tested, live Jev/OMX and benchmark gates not complete. No deployed or installed production system may be claimed from this PR.
 - **Owner:** `menezesx2k26-byte/ops-codex-os`; follow existing `global/AGENTS.md`, architecture constitution, reuse-first, scoped context and existing review gates.
 - **Never modify:** `persistd/src/fleet/typesafe-router.js`, `persistd/src/fleet/router.js`, production PersistFlow, `scripts/install.ps1`, global `~/.codex` or existing user-owned profiles as part of the pilot.
 - **Source snapshot:** repo main at `5842965dbc2251df46c8cadd651ea89f4dd82073`; refresh current branch/head and installed Codex/OMX/plugin versions when executing.
