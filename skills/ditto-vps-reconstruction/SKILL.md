@@ -47,12 +47,21 @@ Prefer a single isolated, on-demand container on the VPS. No permanent second br
 ## Definition of done
 
 - `READY_DOCUMENTED`: skill + integration constraints documented but no runtime installation.
-- `RUNTIME_VERIFIED`: isolated VPS service verified responsive, resource bounded and credential safe.
-- `CLONE_VERIFIED`: one authorized URL rebuilt, tested and compared visually.
+- `RUNTIME_VERIFIED`: on-demand pinned VPS executor built and ran a demonstration clone with resource boundaries; no public service deployed.
+- `CLONE_VERIFIED`: each authorized target rebuilt and validated in its own job; demo URL generation was verified, but full cross-browser fidelity is not inferred.
 - `BLOCKED_*`: report exact blockers; never translate a documented plan into a success claim.
 
 ## What this does not do
 
-Installing this skill only makes guidance available to compatible agents. It does **not** install Ditto, provide API keys, configure MCP transport, or turn a non-running VPS service into a working cloning tool.
+Installing this skill only makes guidance available to compatible agents. The VPS on-demand runner is now deployed and demo-clone verified, but installation **does not** provide credentials to other devices or activate a public MCP endpoint. The Windows client must possess the previously authorized SSH key. Runtime proof: `docs/evidence/ditto-vps-20261122.md`.
 
-See `docs/integrations/ditto-vps-lightweight.md` for rollout decisions and preflight observations.
+## Verified operator invocation (Codex on Windows)
+
+- Run this skill explicitly as `$ditto-vps-reconstruction` with the approved public HTTPS URL. Never infer consent to clone or rehost third-party protected content.
+- Use `scripts/invoke.ps1 -Url 'https://example.com/'` in this skill directory. It makes a verified SSH call to the on-demand VPS runner with an already provisioned SSH key, requiring **no local Node/npm/Chromium/Docker install**.
+- The client pins the VPS host public key from the authorized Hostinger control-plane verification; it does not change `~/.ssh/known_hosts` or relax `StrictHostKeyChecking`.
+- No always-on Ditto service or open port exists. Cloud Codex without access to that SSH identity will not execute this command; it must fail closed.
+- The current VPS runner checks initial DNS targets but is not a comprehensive proxy or redirect/subresource SSRF firewall. Only run user-authorized public targets; do not expose it as a public multi-tenant endpoint.
+- The generated code remains on the VPS in a job-specific directory; never claim that the app's full business functionality or fidelity is proven from smoke generation alone.
+
+See `docs/integrations/ditto-vps-lightweight.md` and `docs/evidence/ditto-vps-20261122.md` for deployment details and test evidence.
