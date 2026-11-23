@@ -52,3 +52,23 @@ If steps 4 or 5 fail, do not treat the Hostinger filesystem as canonical authori
 ## Cost policy
 
 PersistFlow v1 must add no recurring spend. Do not enable paid inference, automatic credits, automatic plan upgrades, or paid storage fallbacks. Existing Hostinger capacity is allowed; upgrading the plan is not automatic.
+
+
+## Owner REST authority security
+
+All `/v1/runs` routes (create, read, heartbeat, checkpoint, claim and
+bridge/sync) require the configured owner Bearer token or its SHA-256 digest
+configuration. Access without a bearer or with an incorrect bearer returns 401
+without exposing run existence or reading an untrusted body. OAuth bearer access
+is restricted to the `/mcp` endpoint, not the owner-only REST API.
+Never expose the owner token in logs, browser JavaScript or source control.
+
+The file authority serializes per-run create, update and successor claims using
+an atomic on-disk lock directory. Contention returns `AUTHORITY_LOCKED`
+(fail-closed); the lock is deliberately **not** reclaimed by a TTL. After an
+unclean shutdown, investigate the last writer, verify no process still owns the
+lock and recover it manually before resuming writes. This prevents an automatic
+stale-lock takeover from allowing split-brain writes. Mount the data directory
+on storage with reliable atomic directory creation and rename semantics; do not
+assume network filesystems provide them. This single-host file store is not a
+distributed transactional database.
